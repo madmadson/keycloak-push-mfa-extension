@@ -58,7 +58,7 @@
    }
    ```
 
-3. **Confirm token delivery:** Every login creates a fresh push challenge. Keycloak signs a `confirmToken` using the realm key and displays/logs it. This token is what would be sent via your push provider (Firebase/FCM in the demo implementation): it only contains the pseudonymous user id and the challenge id (`cid`), so the push provider learns nothing about the real user or that it is a login.
+3. **Confirm token delivery:** Every login creates a fresh push challenge. Keycloak signs a `confirmToken` using the realm key and displays/logs it. This token is what would be sent via your push provider (Firebase/FCM in the demo implementation): it contains only the pseudonymous user id, the challenge id (`cid`), the originating client id, and the numeric message `typ`/`ver` identifiers so the provider learns nothing about the real user or whether the login ultimately succeeds.
 
    ```json
    {
@@ -162,7 +162,7 @@ Payload:
 ```json
 {
   "htm": "POST",
-  "htu": "https://example.com/realms/push-mfa/push-mfa/login/pending",
+  "htu": "https://example.com/realms/push-mfa/push-mfa/login/pending?userId=87fa1c21-1b1e-4af8-98b1-1df2e90d3c3d",
   "iat": 1731402960,
   "jti": "6c1f8a0c-4c6e-4d67-b792-20fd3eb1adfc",
   "sub": "87fa1c21-1b1e-4af8-98b1-1df2e90d3c3d",
@@ -388,14 +388,13 @@ public final class MyPushSenderFactory implements PushNotificationSenderFactory 
 }
 ```
 
-Register the factory using the standard Keycloak service loader entries:
+Register the factory via the standard service loader file for the SPI you are extending:
 
 ```
-META-INF/services/org.keycloak.provider.Spi
-META-INF/services/org.keycloak.provider.ProviderFactory
+META-INF/services/de.arbeitsagentur.keycloak.push.spi.PushNotificationSenderFactory
 ```
 
-Finally, select the provider (for example in `keycloak.conf` or via `--spi-push-notification-sender-provider=fcm`). Once configured, every push challenge that carries `pushProviderType=fcm` uses your implementation instead of the built-in `log` fallback (which simply prints tokens to stdout). Demo scripts keep sending `pushProviderType=log`, so they continue using the logging behavior unless you change their configuration.
+Finally, you must store your factory id (for example, `pushProviderType=fcm`) with each credential during enrollment. The runtime resolves the sender solely from that `pushProviderType`, falling back to the built-in `log` sender if it is blank. Demo scripts keep sending `pushProviderType=log`, so they continue using the logging behavior unless you change their configuration.
 
 With these primitives an actual mobile app UI or automation can be layered on top without depending on helper shell scripts.
 
