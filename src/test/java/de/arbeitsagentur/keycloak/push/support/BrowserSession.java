@@ -1,8 +1,7 @@
 package de.arbeitsagentur.keycloak.push.support;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.net.CookieManager;
 import java.net.CookiePolicy;
@@ -16,8 +15,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 
 public final class BrowserSession {
 
@@ -33,10 +33,10 @@ public final class BrowserSession {
         this.cookieManager = new CookieManager();
         this.cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
         this.http = HttpClient.newBuilder()
-            .version(HttpClient.Version.HTTP_1_1)
-            .cookieHandler(this.cookieManager)
-            .followRedirects(HttpClient.Redirect.NEVER)
-            .build();
+                .version(HttpClient.Version.HTTP_1_1)
+                .cookieHandler(this.cookieManager)
+                .followRedirects(HttpClient.Redirect.NEVER)
+                .build();
         this.realmHost = baseUri.getHost();
         this.realmPort = normalizePort(baseUri);
     }
@@ -45,11 +45,8 @@ public final class BrowserSession {
         String state = UUID.randomUUID().toString();
         String nonce = UUID.randomUUID().toString();
         String query = String.format(
-            "client_id=%s&redirect_uri=%s&response_type=code&scope=openid&state=%s&nonce=%s",
-            urlEncode(clientId),
-            urlEncode(redirectUri),
-            urlEncode(state),
-            urlEncode(nonce));
+                "client_id=%s&redirect_uri=%s&response_type=code&scope=openid&state=%s&nonce=%s",
+                urlEncode(clientId), urlEncode(redirectUri), urlEncode(state), urlEncode(nonce));
         URI authUri = realmBase.resolve("protocol/openid-connect/auth?" + query);
         return fetch(authUri, "GET", null).requirePage();
     }
@@ -82,6 +79,7 @@ public final class BrowserSession {
         URI action = resolve(page.uri(), form.attr("action"));
         FetchResponse response = fetch(action, "POST", Map.of("check", "true"));
         assertEquals(302, response.status(), "Enrollment completion should redirect");
+        assertAccountConsoleAccessible();
     }
 
     public DeviceChallenge extractDeviceChallenge(HtmlPage page) {
@@ -104,6 +102,16 @@ public final class BrowserSession {
     public void completePushChallenge(URI formAction) throws Exception {
         FetchResponse response = fetch(formAction, "POST", Map.of());
         assertEquals(302, response.status(), "Push completion should redirect");
+        assertAccountConsoleAccessible();
+    }
+
+    private void assertAccountConsoleAccessible() throws Exception {
+        URI accountUri = realmBase.resolve("account/");
+        FetchResponse console = fetch(accountUri, "GET", null);
+        assertEquals(200, console.status(), "Account console should load");
+        assertNotNull(console.document(), "Account console response missing HTML");
+        Element appRoot = console.document().getElementById("app");
+        assertNotNull(appRoot, "Account console root element not found");
     }
 
     private FetchResponse fetch(URI uri, String method, Map<String, String> params) throws Exception {
@@ -111,8 +119,8 @@ public final class BrowserSession {
         String currentMethod = method;
         String body = encodeForm(params);
         for (int i = 0; i < 10; i++) {
-            HttpRequest.Builder builder = HttpRequest.newBuilder(current)
-                .header("Accept", "text/html,application/xhtml+xml");
+            HttpRequest.Builder builder =
+                    HttpRequest.newBuilder(current).header("Accept", "text/html,application/xhtml+xml");
             if ("POST".equalsIgnoreCase(currentMethod)) {
                 builder.header("Content-Type", "application/x-www-form-urlencoded");
                 builder.POST(HttpRequest.BodyPublishers.ofString(body == null ? "" : body));
@@ -140,7 +148,8 @@ public final class BrowserSession {
                 body = null;
                 continue;
             }
-            throw new IllegalStateException("Unexpected response " + status + " for " + current + ": " + response.body());
+            throw new IllegalStateException(
+                    "Unexpected response " + status + " for " + current + ": " + response.body());
         }
         throw new IllegalStateException("Too many redirects for " + uri);
     }
@@ -205,8 +214,8 @@ public final class BrowserSession {
 
     private void normalizeCookieDomains() {
         cookieManager.getCookieStore().getCookies().stream()
-            .filter(cookie -> "localhost.local".equalsIgnoreCase(cookie.getDomain()))
-            .forEach(cookie -> cookie.setDomain("localhost"));
+                .filter(cookie -> "localhost.local".equalsIgnoreCase(cookie.getDomain()))
+                .forEach(cookie -> cookie.setDomain("localhost"));
     }
 
     private String cookieHeader() {
@@ -220,13 +229,13 @@ public final class BrowserSession {
         return builder.toString();
     }
 
-    public record DeviceChallenge(String confirmToken, String challengeId, URI formAction) {
-    }
+    public record DeviceChallenge(String confirmToken, String challengeId, URI formAction) {}
 
     private record FetchResponse(int status, URI uri, Document document, String redirectLocation) {
         HtmlPage requirePage() {
             if (document == null) {
-                throw new IllegalStateException("Expected HTML page from " + uri + " but received redirect to " + redirectLocation);
+                throw new IllegalStateException(
+                        "Expected HTML page from " + uri + " but received redirect to " + redirectLocation);
             }
             return new HtmlPage(uri, document);
         }
