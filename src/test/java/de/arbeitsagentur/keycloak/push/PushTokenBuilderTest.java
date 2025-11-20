@@ -15,6 +15,7 @@ import java.net.URI;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.spec.ECGenParameterSpec;
 import java.time.Instant;
 import java.util.Date;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +41,7 @@ class PushTokenBuilderTest {
         Mockito.reset(session, realm, keyManager);
         keyWrapper = buildKeyWrapper("test-kid", Algorithm.RS256.toString());
         Mockito.when(session.keys()).thenReturn(keyManager);
+        Mockito.when(realm.getDefaultSignatureAlgorithm()).thenReturn(Algorithm.RS256.toString());
         Mockito.when(keyManager.getActiveKey(
                         Mockito.any(), Mockito.eq(KeyUse.SIG), Mockito.eq(Algorithm.RS256.toString())))
                 .thenReturn(keyWrapper);
@@ -68,6 +70,28 @@ class PushTokenBuilderTest {
         assertEquals(Date.from(Instant.ofEpochSecond(1700000100)), claims.getExpirationTime());
         assertEquals(keyWrapper.getKid(), jwt.getHeader().getKeyID());
         assertEquals(Algorithm.RS256.toString(), jwt.getHeader().getAlgorithm().getName());
+    }
+
+    @Test
+    void confirmTokenUsesRealmSpecifiedRsaAlgorithm() throws Exception {
+        KeyWrapper rsKey = buildKeyWrapper("rs512-kid", Algorithm.RS512.toString());
+        Mockito.when(realm.getDefaultSignatureAlgorithm()).thenReturn(Algorithm.RS512.toString());
+        Mockito.when(keyManager.getActiveKey(
+                        Mockito.any(), Mockito.eq(KeyUse.SIG), Mockito.eq(Algorithm.RS512.toString())))
+                .thenReturn(rsKey);
+
+        String token = PushConfirmTokenBuilder.build(
+                session,
+                realm,
+                "device-alias",
+                "challenge-123",
+                Instant.ofEpochSecond(1700000150),
+                URI.create("http://localhost:8080/"),
+                null);
+
+        SignedJWT jwt = SignedJWT.parse(token);
+        assertEquals(rsKey.getKid(), jwt.getHeader().getKeyID());
+        assertEquals(Algorithm.RS512.toString(), jwt.getHeader().getAlgorithm().getName());
     }
 
     @Test
@@ -108,15 +132,39 @@ class PushTokenBuilderTest {
         assertEquals("push-enroll-challenge", claims.getStringClaim("typ"));
     }
 
-    private KeyWrapper buildKeyWrapper(String kid, String algorithm) throws NoSuchAlgorithmException {
-        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
-        generator.initialize(2048);
-        KeyPair pair = generator.generateKeyPair();
+    private KeyWrapper buildKeyWrapper(String kid, String algorithm) throws Exception {
+        KeyPair pair;
+        if (algorithm != null && algorithm.startsWith("ES")) {
+            pair = generateEcKeyPair(algorithm);
+        } else {
+            pair = generateRsaKeyPair();
+        }
         KeyWrapper wrapper = new KeyWrapper();
         wrapper.setKid(kid);
         wrapper.setAlgorithm(algorithm);
         wrapper.setPrivateKey(pair.getPrivate());
         wrapper.setPublicKey(pair.getPublic());
         return wrapper;
+    }
+
+    private KeyPair generateRsaKeyPair() throws NoSuchAlgorithmException {
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+        generator.initialize(2048);
+        return generator.generateKeyPair();
+    }
+
+    private KeyPair generateEcKeyPair(String algorithm) throws Exception {
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("EC");
+        generator.initialize(new ECGenParameterSpec(resolveCurve(algorithm)));
+        return generator.generateKeyPair();
+    }
+
+    private String resolveCurve(String algorithm) {
+        return switch (algorithm) {
+            case "ES256" -> "secp256r1";
+            case "ES384" -> "secp384r1";
+            case "ES512" -> "secp521r1";
+            default -> "secp256r1";
+        };
     }
 }

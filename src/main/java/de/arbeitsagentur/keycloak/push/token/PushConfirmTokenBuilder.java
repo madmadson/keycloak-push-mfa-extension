@@ -27,7 +27,11 @@ public final class PushConfirmTokenBuilder {
             Instant challengeExpiresAt,
             URI baseUri,
             String clientId) {
-        KeyWrapper key = session.keys().getActiveKey(realm, KeyUse.SIG, Algorithm.RS256.toString());
+        String signatureAlgorithm = realm.getDefaultSignatureAlgorithm();
+        if (signatureAlgorithm == null || signatureAlgorithm.isBlank()) {
+            signatureAlgorithm = Algorithm.RS256.toString();
+        }
+        KeyWrapper key = session.keys().getActiveKey(realm, KeyUse.SIG, signatureAlgorithm);
         if (key == null || key.getPrivateKey() == null) {
             throw new IllegalStateException("No active signing key for realm");
         }
@@ -48,19 +52,23 @@ public final class PushConfirmTokenBuilder {
         payload.put("iat", issuedAt.getEpochSecond());
         payload.put("exp", challengeExpiresAt.getEpochSecond());
 
-        Algorithm algorithm = Algorithm.RS256;
-        if (key.getAlgorithm() != null) {
-            for (Algorithm candidate : Algorithm.values()) {
-                if (candidate.toString().equalsIgnoreCase(key.getAlgorithm())) {
-                    algorithm = candidate;
-                    break;
-                }
-            }
-        }
+        String algorithmName = key.getAlgorithm() != null ? key.getAlgorithm() : signatureAlgorithm;
+        Algorithm algorithm = resolveAlgorithm(algorithmName);
 
         PrivateKey privateKey = (PrivateKey) key.getPrivateKey();
         EncodingBuilder builder = new JWSBuilder().kid(key.getKid()).type("JWT").jsonContent(payload);
 
         return builder.sign(algorithm, privateKey);
+    }
+
+    private static Algorithm resolveAlgorithm(String name) {
+        if (name != null) {
+            for (Algorithm candidate : Algorithm.values()) {
+                if (candidate.toString().equalsIgnoreCase(name)) {
+                    return candidate;
+                }
+            }
+        }
+        return Algorithm.RS256;
     }
 }
