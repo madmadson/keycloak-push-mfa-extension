@@ -6,7 +6,7 @@ usage() {
 Usage: scripts/update-push-provider.sh <pseudonymous-user-id> <new-push-provider-id> [push-provider-type]
 
 Environment overrides:
-  REALM_BASE            Realm base URL (default: stored value, fallback http://localhost:8080/realms/push-mfa)
+  REALM_BASE            Realm base URL (default: stored value, fallback http://localhost:8080/realms/demo)
   DEVICE_STATE_DIR      Directory storing device state from enroll.sh (default: scripts/device-state)
   TOKEN_ENDPOINT        Override token endpoint (default: stored value)
   DEVICE_CLIENT_ID      Override OAuth client ID (default: stored value)
@@ -45,7 +45,7 @@ KEY_ID=$(echo "$STATE" | jq -r '.keyId // "push-device-client-key"')
 PUBLIC_JWK=$(echo "$STATE" | jq -c '.publicJwk // empty')
 REALM_BASE_DEFAULT=$(echo "$STATE" | jq -r '.realmBase // empty')
 REALM_BASE=${REALM_BASE:-$REALM_BASE_DEFAULT}
-REALM_BASE=${REALM_BASE:-http://localhost:8080/realms/push-mfa}
+REALM_BASE=${REALM_BASE:-http://localhost:8080/realms/demo}
 TOKEN_ENDPOINT_STATE=$(echo "$STATE" | jq -r '.tokenEndpoint // empty')
 CLIENT_ID_STATE=$(echo "$STATE" | jq -r '.clientId // empty')
 CLIENT_SECRET_STATE=$(echo "$STATE" | jq -r '.clientSecret // empty')

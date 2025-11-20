@@ -6,7 +6,7 @@ usage() {
 Usage: scripts/enroll.sh <enrollment-token>
 
 Environment overrides:
-  REALM_BASE               Realm base URL (default: http://localhost:8080/realms/push-mfa)
+  REALM_BASE               Realm base URL (default: http://localhost:8080/realms/demo)
   ENROLL_COMPLETE_URL      Enrollment completion endpoint (default: <REALM_BASE>/push-mfa/enroll/complete)
   TOKEN_ENDPOINT           OAuth2 token endpoint (default: <REALM_BASE>/protocol/openid-connect/token)
   DEVICE_CLIENT_ID         Client ID to request device tokens (default: push-device-client)
@@ -56,7 +56,7 @@ validate_signing_alg() {
 }
 
 
-REALM_BASE=${REALM_BASE:-http://localhost:8080/realms/push-mfa}
+REALM_BASE=${REALM_BASE:-http://localhost:8080/realms/demo}
 ENROLL_COMPLETE_URL=${ENROLL_COMPLETE_URL:-$REALM_BASE/push-mfa/enroll/complete}
 TOKEN_ENDPOINT=${TOKEN_ENDPOINT:-$REALM_BASE/protocol/openid-connect/token}
 DEVICE_CLIENT_ID=${DEVICE_CLIENT_ID:-push-device-client}

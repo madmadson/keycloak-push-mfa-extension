@@ -34,7 +34,7 @@ public final class DeviceClient {
     private String accessToken;
 
     public DeviceClient(URI baseUri, DeviceState state) {
-        this.realmBase = baseUri.resolve("/realms/push-mfa/");
+        this.realmBase = baseUri.resolve("/realms/demo/");
         this.tokenEndpoint = realmBase.resolve("protocol/openid-connect/token");
         this.state = state;
     }

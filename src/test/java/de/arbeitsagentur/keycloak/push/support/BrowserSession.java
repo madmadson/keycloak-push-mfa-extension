@@ -29,7 +29,7 @@ public final class BrowserSession {
     private final int realmPort;
 
     public BrowserSession(URI baseUri) {
-        this.realmBase = baseUri.resolve("/realms/push-mfa/");
+        this.realmBase = baseUri.resolve("/realms/demo/");
         this.cookieManager = new CookieManager();
         this.cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
         this.http = HttpClient.newBuilder()

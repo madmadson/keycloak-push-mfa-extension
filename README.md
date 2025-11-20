@@ -7,21 +7,21 @@
 - Build the provider: `mvn -DskipTests package`
 - Run Keycloak locally (imports realm + loads provider): `docker compose up --build keycloak`
 - Keycloak admin UI: <http://localhost:8080> (`admin` / `admin`)
-- Test realm: `push-mfa` with the user `test / test`
+- Test realm: `demo` with the user `test / test`
 
 ## High Level Flow
 
-1. **Enrollment challenge (RequiredAction):** Keycloak renders a QR code that encodes the realm-signed `enrollmentToken` (in this demo it uses a custom scheme: `push-mfa-login-app://?token=<enrollmentToken>`). The token is a JWT signed with the realm key and contains user id (`sub`), username, `enrollmentId`, and a Base64URL nonce.
+1. **Enrollment challenge (RequiredAction):** Keycloak renders a QR code that encodes the realm-signed `enrollmentToken` (the default theme emits `push-mfa-login-app://?token=<enrollmentToken>`, but you can change the URI scheme/payload in your own theme or override the server-side prefix via `--spi-required-action-push-mfa-register-app-uri-prefix=...`). The token is a JWT signed with the realm key and contains user id (`sub`), username, `enrollmentId`, and a Base64URL nonce.
 
    ```json
    {
      "_comment": "enrollmentToken payload (realm -> device)",
-     "iss": "http://localhost:8080/realms/push-mfa",
-     "aud": "push-mfa",
+     "iss": "http://localhost:8080/realms/demo",
+     "aud": "demo",
      "typ": "push-enroll-challenge",
      "sub": "87fa1c21-1b1e-4af8-98b1-1df2e90d3c3d",
      "username": "test",
-     "realm": "push-mfa",
+     "realm": "demo",
      "enrollmentId": "b15ef7f2-494c-4f03-a9b4-5b7eb4a71caa",
      "nonce": "JYlLk0d9h9zGN7kMd8n5Vw",
      "exp": 1731403200,
@@ -62,8 +62,8 @@
 
    ```json
    {
-     "_comment": "confirmToken payload (realm -> device via push provider such as Firebase/FCM)",
-     "iss": "http://localhost:8080/realms/push-mfa",
+    "_comment": "confirmToken payload (realm -> device via push provider such as Firebase/FCM)",
+    "iss": "http://localhost:8080/realms/demo",
      "sub": "device-alias-bf7a9f52",
      "typ": 1,
      "ver": 1,
@@ -162,7 +162,7 @@ Payload:
 ```json
 {
   "htm": "POST",
-  "htu": "https://example.com/realms/push-mfa/push-mfa/login/pending?userId=87fa1c21-1b1e-4af8-98b1-1df2e90d3c3d",
+  "htu": "https://example.com/realms/demo/push-mfa/login/pending?userId=87fa1c21-1b1e-4af8-98b1-1df2e90d3c3d",
   "iat": 1731402960,
   "jti": "6c1f8a0c-4c6e-4d67-b792-20fd3eb1adfc",
   "sub": "87fa1c21-1b1e-4af8-98b1-1df2e90d3c3d",
@@ -177,7 +177,7 @@ The server rejects proofs if `htm`/`htu` don’t match the actual request, if th
 The device creates a proof for the token endpoint (`POST /protocol/openid-connect/token`), signs it with the device key, and includes it via the `DPoP` header while using the device client credentials. Pseudocode:
 
 ```bash
-REALM_BASE=http://localhost:8080/realms/push-mfa
+REALM_BASE=http://localhost:8080/realms/demo
 TOKEN_ENDPOINT="$REALM_BASE/protocol/openid-connect/token"
 CLIENT_ID=push-device-client
 CLIENT_SECRET=device-client-secret
@@ -207,7 +207,7 @@ Payload:
 
 ```json
 {
-  "iss": "http://localhost:8080/realms/push-mfa",
+  "iss": "http://localhost:8080/realms/demo",
   "sub": "service-account-push-device-client",
   "aud": "account",
   "exp": 1763381192,
@@ -222,12 +222,12 @@ Payload:
 
 ## Custom Keycloak APIs
 
-All endpoints live under `/realms/push-mfa/push-mfa`. Enrollment completion posts the device JWT in the request body, while every other endpoint requires a DPoP header signed with the device key (the structure shown above). There is no Keycloak-issued service token—authentication is fully tied to the device key material.
+All endpoints live under `/realms/demo/push-mfa`. Enrollment completion posts the device JWT in the request body, while every other endpoint requires a DPoP header signed with the device key (the structure shown above). Access tokens still come from the device client credentials, but they are DPoP-bound so every request is cryptographically tied to the hardware key material.
 
 ### Complete enrollment
 
 ```
-POST /realms/push-mfa/push-mfa/enroll/complete
+POST /realms/demo/push-mfa/enroll/complete
 Content-Type: application/json
 
 {
@@ -246,7 +246,7 @@ Keycloak verifies the signature using `cnf.jwk`, persists the credential (JWK, a
 ### List pending login challenges
 
 ```
-GET /realms/push-mfa/push-mfa/login/pending?userId=<keycloak-user-id>
+GET /realms/demo/push-mfa/login/pending?userId=<keycloak-user-id>
 Authorization: DPoP <access-token>
 DPoP: <proof JWT>
 ```
@@ -273,7 +273,7 @@ If the credential referenced by the device assertion does not own an outstanding
 ### Approve or deny a challenge
 
 ```
-POST /realms/push-mfa/push-mfa/login/challenges/{cid}/respond
+POST /realms/demo/push-mfa/login/challenges/{cid}/respond
 Authorization: DPoP <access-token>
 DPoP: <proof JWT>
 Content-Type: application/json
@@ -292,7 +292,7 @@ Keycloak verifies the DPoP proof to authenticate the device, then validates the 
 ### Update the push provider
 
 ```
-PUT /realms/push-mfa/push-mfa/device/push-provider
+PUT /realms/demo/push-mfa/device/push-provider
 Authorization: DPoP <access-token>
 DPoP: <proof JWT>
 Content-Type: application/json
@@ -310,7 +310,7 @@ Keycloak authenticates the request with the current device key and replaces the 
 ### Rotate the device key
 
 ```
-PUT /realms/push-mfa/push-mfa/device/rotate-key
+PUT /realms/demo/push-mfa/device/rotate-key
 Authorization: DPoP <access-token>
 DPoP: <proof JWT>
 Content-Type: application/json
@@ -345,7 +345,7 @@ All scripts source `scripts/common.sh`, which centralizes base64 helpers, compac
 
 ## App Implementation Notes
 
-- **Realm verification:** Enrollment starts when the app scans the QR code and reads `enrollmentToken`. Verify the JWT with the realm JWKS (`/realms/push-mfa/protocol/openid-connect/certs`) before trusting its contents.
+- **Realm verification:** Enrollment starts when the app scans the QR code and reads `enrollmentToken`. Verify the JWT with the realm JWKS (`/realms/demo/protocol/openid-connect/certs`) before trusting its contents.
 - **Device key material:** Generate a key pair per device, select a unique `kid`, and keep the private key in the device secure storage. Persist and exchange the public component exclusively as a JWK (the same document posted in `cnf.jwk`).
 - **Algorithm choice:** The demo scripts default to RSA/RS256 but also support EC keys and ECDSA proofs—set `DEVICE_KEY_TYPE=EC`, pick a curve via `DEVICE_EC_CURVE` (P-256/384/521), and override `DEVICE_SIGNING_ALG` if you need ES256/384/512. The selected algorithm is stored with the credential so Keycloak enforces it for all future DPoP proofs, login approvals, and rotation requests.
 - **State to store locally:** pseudonymous user id ↔ real Keycloak user id mapping, the device key pair, the `kid`, `deviceType`, `pushProviderId`, `pushProviderType`, preferred `deviceLabel`, and any metadata needed to post to Keycloak again.

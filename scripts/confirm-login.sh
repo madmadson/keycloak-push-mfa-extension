@@ -6,7 +6,7 @@ usage() {
 Usage: scripts/confirm-login.sh <confirm-token>
 
 Environment overrides:
-  REALM_BASE               Realm base URL (default: http://localhost:8080/realms/push-mfa). Falls back to stored value.
+  REALM_BASE               Realm base URL (default: http://localhost:8080/realms/demo). Falls back to stored value.
   DEVICE_STATE_DIR         Directory storing device state from enroll.sh (default: scripts/device-state)
   LOGIN_ACTION             Action encoded in the device token (approve or deny, default: approve)
   TOKEN_ENDPOINT           Override token endpoint (default: stored value)
@@ -67,7 +67,7 @@ KID=$(echo "$STATE" | jq -r '.keyId // "push-device-client-key"')
 PUBLIC_JWK=$(echo "$STATE" | jq -c '.publicJwk // empty')
 REALM_BASE_DEFAULT=$(echo "$STATE" | jq -r '.realmBase // empty')
 REALM_BASE=${REALM_BASE:-$REALM_BASE_DEFAULT}
-REALM_BASE=${REALM_BASE:-http://localhost:8080/realms/push-mfa}
+REALM_BASE=${REALM_BASE:-http://localhost:8080/realms/demo}
 TOKEN_ENDPOINT_STATE=$(echo "$STATE" | jq -r '.tokenEndpoint // empty')
 CLIENT_ID_STATE=$(echo "$STATE" | jq -r '.clientId // empty')
 CLIENT_SECRET_STATE=$(echo "$STATE" | jq -r '.clientSecret // empty')

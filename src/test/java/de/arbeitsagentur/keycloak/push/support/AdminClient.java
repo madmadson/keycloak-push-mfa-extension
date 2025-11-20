@@ -55,7 +55,7 @@ public final class AdminClient {
             if (credentialId == null || credentialId.isBlank()) {
                 continue;
             }
-            URI deleteUri = baseUri.resolve("/admin/realms/push-mfa/users/" + userId + "/credentials/" + credentialId);
+            URI deleteUri = baseUri.resolve("/admin/realms/demo/users/" + userId + "/credentials/" + credentialId);
             HttpRequest deleteRequest = HttpRequest.newBuilder(deleteUri)
                     .header("Authorization", "Bearer " + accessToken)
                     .DELETE()
@@ -66,7 +66,7 @@ public final class AdminClient {
     }
 
     private void logoutUser(String userId) throws Exception {
-        URI logoutUri = baseUri.resolve("/admin/realms/push-mfa/users/" + userId + "/logout");
+        URI logoutUri = baseUri.resolve("/admin/realms/demo/users/" + userId + "/logout");
         HttpRequest request = HttpRequest.newBuilder(logoutUri)
                 .header("Authorization", "Bearer " + accessToken)
                 .POST(HttpRequest.BodyPublishers.noBody())
@@ -77,7 +77,7 @@ public final class AdminClient {
 
     private JsonNode readCredentials(String userId) throws Exception {
         ensureAccessToken();
-        URI credentialsUri = baseUri.resolve("/admin/realms/push-mfa/users/" + userId + "/credentials");
+        URI credentialsUri = baseUri.resolve("/admin/realms/demo/users/" + userId + "/credentials");
         HttpRequest request = HttpRequest.newBuilder(credentialsUri)
                 .header("Authorization", "Bearer " + accessToken)
                 .header("Accept", "application/json")
@@ -94,7 +94,7 @@ public final class AdminClient {
 
     private String findUserId(String username) throws Exception {
         ensureAccessToken();
-        URI usersUri = baseUri.resolve("/admin/realms/push-mfa/users?username=" + urlEncode(username));
+        URI usersUri = baseUri.resolve("/admin/realms/demo/users?username=" + urlEncode(username));
         HttpRequest request = HttpRequest.newBuilder(usersUri)
                 .header("Authorization", "Bearer " + accessToken)
                 .header("Accept", "application/json")

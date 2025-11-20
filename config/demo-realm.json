@@ -1,5 +1,5 @@
 {
-  "realm": "push-mfa",
+  "realm": "demo",
   "enabled": true,
   "loginWithEmailAllowed": true,
   "registrationAllowed": false,

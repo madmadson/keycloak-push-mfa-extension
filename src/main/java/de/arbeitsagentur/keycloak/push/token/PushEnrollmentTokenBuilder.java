@@ -23,7 +23,11 @@ public final class PushEnrollmentTokenBuilder {
 
     public static String build(
             KeycloakSession session, RealmModel realm, UserModel user, PushChallenge challenge, URI baseUri) {
-        KeyWrapper key = session.keys().getActiveKey(realm, KeyUse.SIG, Algorithm.RS256.toString());
+        String signatureAlgorithm = realm.getDefaultSignatureAlgorithm();
+        if (signatureAlgorithm == null || signatureAlgorithm.isBlank()) {
+            signatureAlgorithm = Algorithm.RS256.toString();
+        }
+        KeyWrapper key = session.keys().getActiveKey(realm, KeyUse.SIG, signatureAlgorithm);
         if (key == null || key.getPrivateKey() == null) {
             throw new IllegalStateException("No active signing key for realm");
         }
@@ -33,7 +37,7 @@ public final class PushEnrollmentTokenBuilder {
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("iss", issuer.toString());
-        payload.put("aud", "push-mfa");
+        payload.put("aud", realm.getName());
         payload.put("sub", user.getId());
         payload.put("username", user.getUsername());
         payload.put("realm", realm.getName());
@@ -43,20 +47,24 @@ public final class PushEnrollmentTokenBuilder {
         payload.put("iat", Instant.now().getEpochSecond());
         payload.put("typ", "push-enroll-challenge");
 
-        Algorithm algorithm = Algorithm.RS256;
-        if (key.getAlgorithm() != null) {
-            for (Algorithm candidate : Algorithm.values()) {
-                if (candidate.toString().equalsIgnoreCase(key.getAlgorithm())) {
-                    algorithm = candidate;
-                    break;
-                }
-            }
-        }
+        String algorithmName = key.getAlgorithm() != null ? key.getAlgorithm() : signatureAlgorithm;
+        Algorithm algorithm = resolveAlgorithm(algorithmName);
 
         PrivateKey privateKey = (PrivateKey) key.getPrivateKey();
         EncodingBuilder encodingBuilder =
                 new JWSBuilder().kid(key.getKid()).type("JWT").jsonContent(payload);
 
         return encodingBuilder.sign(algorithm, privateKey);
+    }
+
+    private static Algorithm resolveAlgorithm(String name) {
+        if (name != null) {
+            for (Algorithm candidate : Algorithm.values()) {
+                if (candidate.toString().equalsIgnoreCase(name)) {
+                    return candidate;
+                }
+            }
+        }
+        return Algorithm.RS256;
     }
 }
