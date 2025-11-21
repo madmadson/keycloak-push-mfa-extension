@@ -119,11 +119,12 @@ public class PushMfaAuthenticator implements Authenticator {
                 context.getSession(),
                 context.getRealm(),
                 context.getUser(),
+                clientId,
                 confirmToken,
                 credentialData.getPseudonymousUserId(),
                 pushChallenge.getId(),
-                clientId,
-                credentialData.getPushProviderType());
+                credentialData.getPushProviderType(),
+                credentialData.getPushProviderId());
         showWaitingForm(context, pushChallenge, credentialData, confirmToken);
     }
 
