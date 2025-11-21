@@ -318,7 +318,10 @@ public class PushMfaAuthenticator implements Authenticator {
             return null;
         }
         String name = client.getName();
-        return (name == null || name.isBlank()) ? null : name;
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        return name;
     }
 
     private Duration parseDurationSeconds(AuthenticatorConfigModel config, String key, Duration defaultValue) {

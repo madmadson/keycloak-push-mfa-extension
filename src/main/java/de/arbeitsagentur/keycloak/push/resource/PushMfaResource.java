@@ -50,6 +50,7 @@ import org.keycloak.crypto.SignatureVerifierContext;
 import org.keycloak.jose.jwk.JWK;
 import org.keycloak.jose.jws.Algorithm;
 import org.keycloak.jose.jws.JWSInput;
+import org.keycloak.models.ClientModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
@@ -197,7 +198,8 @@ public class PushMfaResource {
                                 device.user().getId(),
                                 challenge.getId(),
                                 challenge.getExpiresAt().getEpochSecond(),
-                                challenge.getClientId()))
+                                challenge.getClientId(),
+                                resolveClientDisplayName(challenge.getClientId())))
                         .toList();
         return Response.ok(Map.of("challenges", pending)).build();
     }
@@ -376,6 +378,21 @@ public class PushMfaResource {
 
     private RealmModel realm() {
         return session.getContext().getRealm();
+    }
+
+    private String resolveClientDisplayName(String clientId) {
+        if (clientId == null || clientId.isBlank()) {
+            return null;
+        }
+        ClientModel client = session.clients().getClientByClientId(realm(), clientId);
+        if (client == null) {
+            return null;
+        }
+        String name = client.getName();
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        return name;
     }
 
     private UserModel getUser(String userId) {
@@ -872,7 +889,8 @@ public class PushMfaResource {
             @JsonProperty("userId") String userId,
             @JsonProperty("cid") String cid,
             @JsonProperty("expiresAt") long expiresAt,
-            @JsonProperty("clientId") String clientId) {}
+            @JsonProperty("clientId") String clientId,
+            @JsonProperty("clientName") String clientName) {}
 
     record ChallengeRespondRequest(@JsonProperty("token") String token) {}
 

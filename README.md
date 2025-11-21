@@ -62,8 +62,8 @@
 
    ```json
    {
-    "_comment": "confirmToken payload (realm -> device via push provider such as Firebase/FCM)",
-    "iss": "http://localhost:8080/realms/demo",
+     "_comment": "confirmToken payload (realm -> device via push provider such as Firebase/FCM)",
+     "iss": "http://localhost:8080/realms/demo",
      "sub": "device-alias-bf7a9f52",
      "typ": 1,
      "ver": 1,
@@ -79,13 +79,13 @@
 
    ```json
    {
-     "_comment": "login approval payload (device -> realm)",
-     "cid": "1a6d6a0b-3385-4772-8eb8-0d2f4dbd25a4",
-     "sub": "87fa1c21-1b1e-4af8-98b1-1df2e90d3c3d",
-     "deviceId": "device-3d7a4e65-9bd6-4df3-9c7d-2b3e0ce9e1a5",
-     "action": "approve",
-     "exp": 1731403020
-   }
+      "_comment": "login approval payload (device -> realm)",
+      "cid": "1a6d6a0b-3385-4772-8eb8-0d2f4dbd25a4",
+      "sub": "87fa1c21-1b1e-4af8-98b1-1df2e90d3c3d",
+      "deviceId": "device-3d7a4e65-9bd6-4df3-9c7d-2b3e0ce9e1a5",
+      "action": "approve",
+      "exp": 1731403020
+    }
    ```
 
    See [DPoP Authentication](#dpop-authentication) for the proof format and how access tokens are obtained.
@@ -261,7 +261,8 @@ The `DPoP` header carries a short-lived JWT signed with the device key (see the 
       "userId": "87fa1c21-1b1e-4af8-98b1-1df2e90d3c3d",
       "cid": "1a6d6a0b-3385-4772-8eb8-0d2f4dbd25a4",
       "expiresAt": 1731402972,
-      "clientId": "test-app"
+      "clientId": "test-app",
+      "clientName": "Test App"
     }
   ]
 }
@@ -351,7 +352,7 @@ All scripts source `scripts/common.sh`, which centralizes base64 helpers, compac
 - **Algorithm choice:** The demo scripts default to RSA/RS256 but also support EC keys and ECDSA proofs—set `DEVICE_KEY_TYPE=EC`, pick a curve via `DEVICE_EC_CURVE` (P-256/384/521), and override `DEVICE_SIGNING_ALG` if you need ES256/384/512. The selected algorithm is stored with the credential so Keycloak enforces it for all future DPoP proofs, login approvals, and rotation requests.
 - **State to store locally:** pseudonymous user id ↔ real Keycloak user id mapping, the device key pair, the `kid`, `deviceType`, `pushProviderId`, `pushProviderType`, preferred `deviceLabel`, and any metadata needed to post to Keycloak again.
 - **Confirm token handling:** When the confirm token arrives through Firebase (or when the user copies it from the waiting UI), decode the JWT, extract `cid` and `sub`, and either call `/push-mfa/login/pending` (optional) or immediately sign the login approval JWT and post it to `/push-mfa/login/challenges/{cid}/respond`. Use the optional `client_name` claim (when present) to display a friendly app label.
-- **Pending challenge discovery:** Before calling `/push-mfa/login/pending`, build a DPoP proof that includes the HTTP method (`htm`), full URL (`htu`), `sub`, `deviceId`, `iat`, and a fresh `jti`, and send it via the `DPoP` header so Keycloak can scope the response to that physical device.
+- **Pending challenge discovery:** Before calling `/push-mfa/login/pending`, build a DPoP proof that includes the HTTP method (`htm`), full URL (`htu`), `sub`, `deviceId`, `iat`, and a fresh `jti`, and send it via the `DPoP` header so Keycloak can scope the response to that physical device. The response lists each pending challenge with `clientId` and `clientName`.
 - **Access tokens:** Obtain a short-lived access token via the realm’s token endpoint using the device client credentials. The token request itself must include a DPoP proof, and each subsequent REST call must send `Authorization: DPoP <access-token>` alongside a fresh `DPoP` header signed with the same key.
 - **Request authentication:** Every REST call (aside from enrollment, which already embeds the device key) must include a DPoP proof signed with the current device key. The proof binds the request method and URL to the hardware-backed key, making replay or reverse-engineering of a shared client secret ineffective.
 - **Error handling:** Enrollment and login requests return structured error responses (`400`, `403`, or `404`) when the JWTs are invalid, expired, or mismatched. Surface those errors to the user to re-trigger the flow if necessary.
