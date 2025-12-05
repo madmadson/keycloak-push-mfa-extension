@@ -211,7 +211,9 @@
             <formatAnnotations/>
           </java>
           <pom>
-            <sortPom/>
+            <sortPom>
+              <expandEmptyElements>false</expandEmptyElements>
+            </sortPom>
           </pom>
         </configuration>
       </plugin>
