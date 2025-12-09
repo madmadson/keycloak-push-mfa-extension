@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.2](https://github.com/ba-itsys/keycloak-push-mfa-extension/compare/v1.0.1...v1.0.2) (2025-12-09)
+
+
+### Bug Fixes
+
+* move beans.xml from META-INF.services to META-INF ([7e007e0](https://github.com/ba-itsys/keycloak-push-mfa-extension/commit/7e007e0264dabb30fbff316befcaf0b225776688))
+* move beans.xml from META-INF.services to META-INF ([38a7ab4](https://github.com/ba-itsys/keycloak-push-mfa-extension/commit/38a7ab468607b7f11f5ab802f4345ff62f914e43))
+
 ## [1.0.1](https://github.com/ba-itsys/keycloak-push-mfa-extension/compare/v1.0.0...v1.0.1) (2025-12-09)
 
 
