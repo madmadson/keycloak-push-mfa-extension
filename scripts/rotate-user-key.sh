@@ -12,7 +12,7 @@ Environment overrides:
   NEW_DEVICE_KEY_BITS RSA key size for the new key (default: 2048)
   NEW_DEVICE_KEY_TYPE Key type for the new key (RSA or EC, default: current type)
   NEW_DEVICE_EC_CURVE Curve for EC keys (P-256, P-384, P-521; default: current or P-256)
-  NEW_DEVICE_ALG      Algorithm string persisted with the credential (default: matches key type)
+  NEW_DEVICE_ALG      Algorithm string embedded in the new JWK (default: matches key type)
   TOKEN_ENDPOINT      Override token endpoint (default: stored value)
   DEVICE_CLIENT_ID    Override OAuth client ID (default: stored value)
   DEVICE_CLIENT_SECRET Override OAuth client secret (default: stored value)
@@ -216,7 +216,7 @@ RESPONSE=$(curl -s -X PUT \
   -H "Authorization: DPoP $ACCESS_TOKEN" \
   -H "DPoP: $ROTATE_DPOP" \
   -H "Content-Type: application/json" \
-  -d "$(jq -n --argjson jwk "$(cat "$NEW_JWK_PATH")" --arg algorithm "$NEW_DEVICE_ALG" '{publicKeyJwk: $jwk, algorithm: $algorithm}')" \
+  -d "$(jq -n --argjson jwk "$(cat "$NEW_JWK_PATH")" '{publicKeyJwk: $jwk}')" \
   "$ROTATE_URL")
 echo "$RESPONSE" | jq
 

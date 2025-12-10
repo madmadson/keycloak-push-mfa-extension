@@ -7,7 +7,6 @@ import de.arbeitsagentur.keycloak.push.util.PushMfaConstants;
 public class PushCredentialData {
 
     private final String publicKeyJwk;
-    private final String algorithm;
     private final long createdAt;
     private final String deviceType;
     private final String pushProviderId;
@@ -18,7 +17,6 @@ public class PushCredentialData {
     @JsonCreator
     public PushCredentialData(
             @JsonProperty("publicKeyJwk") String publicKeyJwk,
-            @JsonProperty("algorithm") String algorithm,
             @JsonProperty("createdAt") long createdAt,
             @JsonProperty("deviceType") String deviceType,
             @JsonProperty("pushProviderId") String pushProviderId,
@@ -26,7 +24,6 @@ public class PushCredentialData {
             @JsonProperty("credentialId") String credentialId,
             @JsonProperty("deviceId") String deviceId) {
         this.publicKeyJwk = publicKeyJwk;
-        this.algorithm = algorithm;
         this.createdAt = createdAt;
         this.deviceType = deviceType;
         this.pushProviderId = pushProviderId;
@@ -39,10 +36,6 @@ public class PushCredentialData {
 
     public String getPublicKeyJwk() {
         return publicKeyJwk;
-    }
-
-    public String getAlgorithm() {
-        return algorithm;
     }
 
     public long getCreatedAt() {

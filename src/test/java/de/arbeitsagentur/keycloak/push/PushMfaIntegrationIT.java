@@ -1,6 +1,7 @@
 package de.arbeitsagentur.keycloak.push;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,6 +12,7 @@ import de.arbeitsagentur.keycloak.push.support.DeviceKeyType;
 import de.arbeitsagentur.keycloak.push.support.DeviceSigningKey;
 import de.arbeitsagentur.keycloak.push.support.DeviceState;
 import de.arbeitsagentur.keycloak.push.support.HtmlPage;
+import de.arbeitsagentur.keycloak.push.util.PushMfaConstants;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -74,6 +76,30 @@ class PushMfaIntegrationIT {
         try {
             DeviceClient deviceClient = enrollDevice(DeviceKeyType.ECDSA);
             completeLoginFlow(deviceClient);
+        } catch (Exception ex) {
+            System.err.println("Keycloak container logs:\n" + KEYCLOAK.getLogs());
+            throw ex;
+        }
+    }
+
+    @Test
+    void deviceDeniesLoginChallenge() throws Exception {
+        try {
+            DeviceClient deviceClient = enrollDevice();
+            BrowserSession pushSession = new BrowserSession(baseUri);
+            HtmlPage pushLogin = pushSession.startAuthorization("test-app");
+            HtmlPage waitingPage = pushSession.submitLogin(pushLogin, "test", "test");
+            BrowserSession.DeviceChallenge confirm = pushSession.extractDeviceChallenge(waitingPage);
+
+            String status = deviceClient.respondToChallenge(
+                    confirm.confirmToken(), confirm.challengeId(), PushMfaConstants.CHALLENGE_DENY);
+            assertEquals("denied", status);
+
+            HtmlPage deniedPage = pushSession.submitPushChallengeForPage(confirm.formAction());
+            String pageText = deniedPage.document().text().toLowerCase();
+            assertTrue(
+                    pageText.contains("push approval denied") || pageText.contains("push request was denied"),
+                    "Denied page should explain the rejected push login");
         } catch (Exception ex) {
             System.err.println("Keycloak container logs:\n" + KEYCLOAK.getLogs());
             throw ex;

@@ -45,7 +45,6 @@ class PushCredentialServiceTest {
         Mockito.when(manager.createStoredCredential(Mockito.any())).thenReturn(persisted);
         PushCredentialData data = new PushCredentialData(
                 "{\"kty\":\"RSA\"}",
-                "RS256",
                 Instant.now().toEpochMilli(),
                 "ios",
                 "push-token",
@@ -65,19 +64,19 @@ class PushCredentialServiceTest {
 
     @Test
     void readCredentialDataParsesJson() {
-        PushCredentialData data = new PushCredentialData(
-                "{\"kty\":\"RSA\"}", "RS256", 1L, "ios", "token-1", "log", "credential-1", "device");
+        PushCredentialData data =
+                new PushCredentialData("{\"kty\":\"RSA\"}", 1L, "ios", "token-1", "log", "credential-1", "device");
         CredentialModel model = new CredentialModel();
         model.setCredentialData(PushCredentialUtils.toJson(data));
         PushCredentialData read = PushCredentialService.readCredentialData(model);
         assertEquals(data.getDeviceId(), read.getDeviceId());
-        assertEquals(data.getAlgorithm(), read.getAlgorithm());
+        assertEquals(data.getPushProviderType(), read.getPushProviderType());
     }
 
     @Test
     void updateCredentialRewritesStoredValue() {
-        PushCredentialData data = new PushCredentialData(
-                "{\"kty\":\"RSA\"}", "RS256", 1L, "ios", "token-2", "log", "credential-2", "device");
+        PushCredentialData data =
+                new PushCredentialData("{\"kty\":\"RSA\"}", 1L, "ios", "token-2", "log", "credential-2", "device");
         CredentialModel model = new CredentialModel();
         PushCredentialService.updateCredential(user, model, data);
         Mockito.verify(manager).updateStoredCredential(model);

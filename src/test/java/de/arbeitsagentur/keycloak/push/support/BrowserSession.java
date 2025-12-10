@@ -105,6 +105,10 @@ public final class BrowserSession {
         assertAccountConsoleAccessible();
     }
 
+    public HtmlPage submitPushChallengeForPage(URI formAction) throws Exception {
+        return fetch(formAction, "POST", Map.of()).requirePage();
+    }
+
     private void assertAccountConsoleAccessible() throws Exception {
         URI accountUri = realmBase.resolve("account/");
         FetchResponse console = fetch(accountUri, "GET", null);

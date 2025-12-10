@@ -104,15 +104,15 @@ public class PushMfaResource {
             throw new BadRequestException("Invalid enrollment token");
         }
 
-        Algorithm algorithm = deviceResponse.getHeader().getAlgorithm();
-        requireSupportedAlgorithm(algorithm, "enrollment token");
-
         JsonNode payload;
         try {
             payload = JsonSerialization.mapper.readTree(deviceResponse.getContent());
         } catch (Exception ex) {
             throw new BadRequestException("Unable to parse enrollment token");
         }
+
+        Algorithm algorithm = deviceResponse.getHeader().getAlgorithm();
+        requireSupportedAlgorithm(algorithm, "enrollment token");
 
         String userId = require(jsonText(payload, "sub"), "sub");
         UserModel user = getUser(userId);
@@ -164,7 +164,6 @@ public class PushMfaResource {
 
         PushCredentialData data = new PushCredentialData(
                 jwkNode.toString(),
-                algorithm.toString(),
                 Instant.now().toEpochMilli(),
                 deviceType,
                 pushProviderId,
@@ -196,6 +195,7 @@ public class PushMfaResource {
                         .filter(this::ensureAuthenticationSessionActive)
                         .map(challenge -> new LoginChallenge(
                                 device.user().getId(),
+                                device.user().getUsername(),
                                 challenge.getId(),
                                 challenge.getExpiresAt().getEpochSecond(),
                                 challenge.getClientId(),
@@ -266,9 +266,6 @@ public class PushMfaResource {
 
         PushCredentialData data = assertion.credentialData();
 
-        if (data.getAlgorithm() != null && !algorithm.toString().equalsIgnoreCase(data.getAlgorithm())) {
-            throw new BadRequestException("Authentication token algorithm mismatch");
-        }
         if (data.getCredentialId() == null || data.getCredentialId().isBlank()) {
             throw new BadRequestException("Stored credential missing credentialId");
         }
@@ -333,7 +330,6 @@ public class PushMfaResource {
         }
         PushCredentialData updated = new PushCredentialData(
                 current.getPublicKeyJwk(),
-                current.getAlgorithm(),
                 current.getCreatedAt(),
                 current.getDeviceType(),
                 pushProviderId,
@@ -355,17 +351,14 @@ public class PushMfaResource {
         DeviceAssertion device = authenticateDevice(headers, uriInfo, "PUT");
         JsonNode jwkNode = Optional.ofNullable(request.publicKeyJwk())
                 .orElseThrow(() -> new BadRequestException("Request missing publicKeyJwk"));
-        String algorithm = require(request.algorithm(), "algorithm");
-        requireSupportedAlgorithm(algorithm, "rotate-key request");
-        String normalizedAlgorithm = algorithm.toUpperCase();
 
         KeyWrapper newKey = keyWrapperFromNode(jwkNode);
+        String normalizedAlgorithm = algorithmFromJwk(jwkNode, newKey);
         ensureKeyMatchesAlgorithm(newKey, normalizedAlgorithm);
 
         PushCredentialData current = device.credentialData();
         PushCredentialData updated = new PushCredentialData(
                 jwkNode.toString(),
-                normalizedAlgorithm,
                 Instant.now().toEpochMilli(),
                 current.getDeviceType(),
                 current.getPushProviderId(),
@@ -556,10 +549,6 @@ public class PushMfaResource {
                 || credentialData.getPublicKeyJwk().isBlank()) {
             throw new BadRequestException("Stored credential missing JWK");
         }
-        if (credentialData.getAlgorithm() != null
-                && !algorithm.toString().equalsIgnoreCase(credentialData.getAlgorithm())) {
-            throw new BadRequestException("DPoP algorithm mismatch");
-        }
 
         KeyWrapper keyWrapper = keyWrapperFromString(credentialData.getPublicKeyJwk());
         ensureKeyMatchesAlgorithm(keyWrapper, algorithm.name());
@@ -665,6 +654,21 @@ public class PushMfaResource {
         keyWrapper.setAlgorithm(normalizedAlg);
     }
 
+    private String algorithmFromJwk(JsonNode jwkNode, KeyWrapper keyWrapper) {
+        String algorithm = keyWrapper != null ? keyWrapper.getAlgorithm() : null;
+        if ((algorithm == null || algorithm.isBlank()) && jwkNode != null) {
+            JsonNode algNode = jwkNode.get("alg");
+            if (algNode != null && algNode.isTextual()) {
+                algorithm = algNode.asText();
+            }
+        }
+        if (algorithm == null || algorithm.isBlank()) {
+            throw new BadRequestException("JWK missing alg");
+        }
+        requireSupportedAlgorithm(algorithm, "rotate-key request");
+        return algorithm.toUpperCase();
+    }
+
     private static String curveForAlgorithm(String algorithm) {
         return switch (algorithm) {
             case "ES256" -> "P-256";
@@ -683,6 +687,9 @@ public class PushMfaResource {
             KeyWrapper wrapper = JWKSUtils.getKeyWrapper(jwk);
             if (wrapper == null) {
                 throw new BadRequestException("Unsupported JWK");
+            }
+            if (wrapper.getAlgorithm() == null && jwk.getAlgorithm() != null) {
+                wrapper.setAlgorithm(jwk.getAlgorithm());
             }
             return wrapper;
         } catch (BadRequestException ex) {
@@ -891,6 +898,7 @@ public class PushMfaResource {
 
     record LoginChallenge(
             @JsonProperty("userId") String userId,
+            @JsonProperty("username") String username,
             @JsonProperty("cid") String cid,
             @JsonProperty("expiresAt") long expiresAt,
             @JsonProperty("clientId") String clientId,
@@ -902,8 +910,7 @@ public class PushMfaResource {
             @JsonProperty("pushProviderId") String pushProviderId,
             @JsonProperty("pushProviderType") String pushProviderType) {}
 
-    record RotateDeviceKeyRequest(
-            @JsonProperty("publicKeyJwk") JsonNode publicKeyJwk, @JsonProperty("algorithm") String algorithm) {}
+    record RotateDeviceKeyRequest(@JsonProperty("publicKeyJwk") JsonNode publicKeyJwk) {}
 
     record DeviceAssertion(UserModel user, CredentialModel credential, PushCredentialData credentialData) {}
 }

@@ -9,6 +9,7 @@ import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import de.arbeitsagentur.keycloak.push.util.PushMfaConstants;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -73,17 +74,24 @@ public final class DeviceClient {
     }
 
     public void respondToChallenge(String confirmToken, String challengeId) throws Exception {
+        String status = respondToChallenge(confirmToken, challengeId, PushMfaConstants.CHALLENGE_APPROVE);
+        assertEquals("approved", status);
+    }
+
+    public String respondToChallenge(String confirmToken, String challengeId, String action) throws Exception {
         ensureAccessToken();
         SignedJWT confirm = SignedJWT.parse(confirmToken);
         var confirmClaims = confirm.getJWTClaimsSet();
         String cid = Objects.requireNonNullElse(confirmClaims.getStringClaim("cid"), challengeId);
         String credId = Objects.requireNonNull(confirmClaims.getStringClaim("credId"), "Confirm token missing credId");
         assertEquals(state.credentialId(), credId, "Confirm token carried unexpected credential id");
+        String tokenAction = (action == null || action.isBlank()) ? PushMfaConstants.CHALLENGE_APPROVE : action;
+        String normalizedAction = tokenAction.toLowerCase();
         JWTClaimsSet loginClaims = new JWTClaimsSet.Builder()
                 .claim("cid", cid)
                 .claim("credId", credId)
                 .claim("deviceId", state.deviceId())
-                .claim("action", "approve")
+                .claim("action", normalizedAction)
                 .expirationTime(java.util.Date.from(Instant.now().plusSeconds(120)))
                 .build();
         SignedJWT loginToken = sign(loginClaims);
@@ -99,7 +107,7 @@ public final class DeviceClient {
                 .build();
         HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
         assertEquals(200, response.statusCode(), () -> "Respond failed: " + response.body());
-        assertEquals("approved", MAPPER.readTree(response.body()).path("status").asText());
+        return MAPPER.readTree(response.body()).path("status").asText();
     }
 
     public String updatePushProvider(String pushProviderId, String pushProviderType) throws Exception {
@@ -130,7 +138,6 @@ public final class DeviceClient {
         JsonNode jwkNode = MAPPER.readTree(newKey.publicJwk().toJSONString());
         var body = MAPPER.createObjectNode();
         body.set("publicKeyJwk", jwkNode);
-        body.put("algorithm", newKey.algorithm().getName());
         HttpRequest request = HttpRequest.newBuilder(rotateUri)
                 .header("Authorization", "DPoP " + accessToken)
                 .header("DPoP", createDpopProof("PUT", rotateUri))
