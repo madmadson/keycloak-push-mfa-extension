@@ -102,7 +102,7 @@ paths:
                     items:
                       $ref: '#/components/schemas/LoginChallenge'
         403:
-          description: Forbidden (DPoP proof invalid or user ID mismatch)
+            $ref: '#/components/responses/DPoPProofError'
   /login/challenges/{cid}/respond:
     post:
       summary: Respond to a login challenge
@@ -148,7 +148,7 @@ paths:
         400:
           description: Bad request (e.g., invalid token, unknown action)
         403:
-          description: Forbidden (e.g., user-verification mismatch, DPoP failure)
+          $ref: '#/components/responses/DPoPProofError'
         404:
           description: Challenge not found or already resolved
   /login/challenges/{cid}/events:
@@ -200,7 +200,7 @@ paths:
                     type: string
                     example: locked
         403:
-          description: Forbidden
+          $ref: '#/components/responses/DPoPProofError'
   /device/push-provider:
     put:
       summary: Update device push-provider registration
@@ -244,7 +244,7 @@ paths:
         400:
           description: Bad request (e.g., missing pushProviderId)
         403:
-          description: Forbidden
+          $ref: '#/components/responses/DPoPProofError'
   /device/rotate-key:
     put:
       summary: Rotate device signing key
@@ -280,7 +280,7 @@ paths:
         400:
           description: Bad request (e.g., unsupported key type or invalid JWK)
         403:
-          description: Forbidden
+          $ref: '#/components/responses/DPoPProofError'
 security:
   - DPoP: []
 components:
@@ -292,6 +292,20 @@ components:
         Demonstrating Proof-of-Possession (RFC 9449) bound access token.
         Every request must include both an `Authorization: DPoP <token>` header
         and a `DPoP: <proof-jwt>` header signed with the device key.
+  responses:
+    DPoPProofError:
+      description: DPoP proof failed validation (invalid/missing proof, htm/htu mismatch, signature failure, DPoP binding mismatch, replay)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "DPoP proof invalid"
+              error_description:
+                type: string
+                example: "DPoP proof htm mismatch"
   schemas:
     LoginChallenge:
       type: object
