@@ -630,7 +630,8 @@ class PushMfaIntegrationIT {
         BrowserSession pushSession = new BrowserSession(baseUri);
 
         long beforeLogin = Instant.now().getEpochSecond();
-        HtmlPage waitingPage = pushSession.submitLogin(pushSession.startAuthorization("test-app"), TEST_USERNAME, TEST_PASSWORD);
+        HtmlPage waitingPage =
+                pushSession.submitLogin(pushSession.startAuthorization("test-app"), TEST_USERNAME, TEST_PASSWORD);
         long afterLogin = Instant.now().getEpochSecond();
         BrowserSession.DeviceChallenge confirm = pushSession.extractDeviceChallenge(waitingPage);
 
@@ -643,7 +644,8 @@ class PushMfaIntegrationIT {
                 createdAt >= beforeLogin && createdAt <= afterLogin + 1,
                 () -> "createdAt=" + createdAt + " should be within [" + beforeLogin + ", " + (afterLogin + 1) + "]");
 
-        deviceClient.respondToChallenge(confirm.confirmToken(), confirm.challengeId(), PushMfaConstants.CHALLENGE_APPROVE);
+        deviceClient.respondToChallenge(
+                confirm.confirmToken(), confirm.challengeId(), PushMfaConstants.CHALLENGE_APPROVE);
         pushSession.completePushChallenge(confirm.formAction());
     }
 
